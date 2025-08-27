@@ -5,6 +5,7 @@ import "dotenv/config";
 
 import express from "express";
 import cors from "cors";
+import { verifyDb, pool } from "./db.js";
 
 const app = express();
 
@@ -24,6 +25,16 @@ app.use(
 // Health endpoint so platforms like Render can check liveness
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
+app.get("/db/health", async (_req, res) => {
+  try {
+    const r = await pool.query("SELECT NOW() as now");
+    res.json({ status: "ok", now: r.rows[0].now });
+  } catch (err) {
+    console.error("DB health error:", err);
+    res.status(500).json({ status: "error" });
+  }
+});
+
 // Some providers send HEAD / — respond 200 so health checks pass
 app.head("/", (_req, res) => res.sendStatus(200));
 
@@ -33,6 +44,15 @@ app.get("/", (_req, res) => {
 });
 
 const port = process.env.PORT || 10000;
-app.listen(port, () => {
-  console.log(`API listening on http://localhost:${port}`);
-});
+
+(async () => {
+  try {
+    await verifyDb(); // ensure Supabase is reachable before serving
+    app.listen(port, () => {
+      console.log(`API listening on http://localhost:${port}`);
+    });
+  } catch (err) {
+    console.error("Failed to start: DB not reachable.", err);
+    process.exit(1);
+  }
+})();
