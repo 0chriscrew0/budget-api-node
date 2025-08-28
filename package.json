@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "migrate": "docker compose exec -T db psql -U postgres -d budget < migrations/001_init.sql"
   },
   "keywords": [],
   "author": "",
